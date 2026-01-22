@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -21,7 +20,6 @@ const App: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  // AI Execution States
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -64,7 +62,7 @@ const App: React.FC = () => {
     setAiImageUrl(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       
       if (promptState.type === 'text') {
         const response = await ai.models.generateContent({
@@ -78,15 +76,18 @@ const App: React.FC = () => {
           contents: { parts: [{ text: promptState.generatedPrompt }] },
         });
         
-        for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            setAiImageUrl(`data:image/png;base64,${part.inlineData.data}`);
+        const candidate = response.candidates?.[0];
+        if (candidate) {
+          for (const part of candidate.content.parts) {
+            if (part.inlineData) {
+              setAiImageUrl(`data:image/png;base64,${part.inlineData.data}`);
+            }
           }
         }
       }
     } catch (error) {
       console.error("Erro na IA:", error);
-      setAiResponse("Erro ao conectar com a IA. Verifique sua conexão ou chave de API.");
+      setAiResponse("Erro ao conectar com a IA. No Vercel, certifique-se de adicionar a variável de ambiente API_KEY.");
     } finally {
       setIsAiLoading(false);
     }
@@ -336,7 +337,7 @@ const ResultView: React.FC<{
   response: string | null,
   imageUrl: string | null
 }> = ({ promptState, onCopy, copied, onRestart, theme, onExecute, isLoading, response, imageUrl }) => (
-  <motion.section initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-3xl px-6">
+  <motion.section initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={mobileTransition} className="w-full max-w-3xl px-6">
     <div className="text-center mb-8">
       <h2 className="text-3xl font-black">Prompt Master ✨</h2>
     </div>
@@ -367,7 +368,6 @@ const ResultView: React.FC<{
       </button>
     </div>
 
-    {/* AI OUTPUT AREA */}
     <AnimatePresence>
       {(response || imageUrl || isLoading) && (
         <motion.div 
@@ -391,7 +391,7 @@ const ResultView: React.FC<{
                   <img src={imageUrl} alt="Resultado da IA" className="w-full h-auto" />
                 </div>
               ) : (
-                <p className={`text-lg leading-relaxed font-medium ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                <p className={`text-lg leading-relaxed font-medium whitespace-pre-wrap ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
                   {response}
                 </p>
               )}
