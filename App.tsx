@@ -21,7 +21,6 @@ const App: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  // IA States
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -57,33 +56,36 @@ const App: React.FC = () => {
     setAiImageUrl(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       
       if (promptState.type === 'text') {
-        const response = await ai.models.generateContent({
+        const response = await genAI.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: promptState.generatedPrompt,
         });
         setAiResponse(response.text || "Sem resposta da IA.");
       } else {
-        const response = await ai.models.generateContent({
+        const response = await genAI.models.generateContent({
           model: 'gemini-2.5-flash-image',
           contents: { parts: [{ text: promptState.generatedPrompt }] },
         });
         
-        const candidate = response.candidates?.[0];
-        const parts = candidate?.content?.parts;
-        
-        if (parts) {
-          for (const part of parts) {
-            if (part.inlineData) {
-              setAiImageUrl(`data:image/png;base64,${part.inlineData.data}`);
-            } else if (part.text) {
-              setAiResponse(part.text);
+        // Verificação ultra-segura para satisfazer o TypeScript
+        const candidates = response.candidates;
+        if (candidates && candidates.length > 0) {
+          const firstCandidate = candidates[0];
+          if (firstCandidate.content && firstCandidate.content.parts) {
+            const parts = firstCandidate.content.parts;
+            for (const part of parts) {
+              if (part.inlineData) {
+                setAiImageUrl(`data:image/png;base64,${part.inlineData.data}`);
+              } else if (part.text) {
+                setAiResponse(part.text);
+              }
             }
           }
         } else {
-          setAiResponse("A IA não gerou conteúdo visual.");
+          setAiResponse("Nenhuma imagem gerada.");
         }
       }
     } catch (error: any) {
