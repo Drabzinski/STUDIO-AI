@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   MessageSquare, BookOpen, Briefcase, User, Calendar, 
@@ -70,7 +69,7 @@ export const TEMPLATES: Template[] = [
   { id: 't29', title: 'Crítica de Texto', type: 'text', preview: 'Estudos', prompt: 'Atue como um editor literário. Aponte 3 pontos fracos e 3 pontos fortes no texto a seguir: [TEXTO].' },
   { id: 't30', title: 'Ideias de Reels Tendência', type: 'text', preview: 'Social', prompt: 'Sugira 5 áudios ou tendências atuais que podem ser adaptadas para o nicho de [NICHO].' },
   { id: 't31', title: 'Prompt de Resumo em Tópicos', type: 'text', preview: 'Produtividade', prompt: 'Extraia as 10 principais ideias do texto abaixo em uma lista de bullet points simples e clara: [TEXTO].' },
-  { id: 't32', title: 'Gerador de Nomes de Marca', type: 'text', preview: 'Outro', prompt: 'Sugira 15 nomes curtos e modernos para uma empresa que trabalha com [SETOR]. Explique o conceito.' },
+  { id: 't32', title: 'Gerador de Nomes de Marca', type: 'text', preview: 'Outro', prompt: 'Sugira 15 nomes curtos e modernos para uma empresa que trabalha com [SETOR]. Explique o concept.' },
   { id: 't33', title: 'Roteiro de Vendas Direta', type: 'text', preview: 'Vendas', prompt: 'Crie um pitch de vendas de elevador (elevator pitch) para o produto [PRODUTO]. Duração: 45 segundos.' },
   { id: 't34', title: 'E-mail de Follow-up', type: 'text', preview: 'Trabalho', prompt: 'Escreva um e-mail educado cobrando uma resposta sobre a proposta enviada há 3 dias. Sem ser invasivo.' },
   { id: 't35', title: 'Debate de Argumentos', type: 'text', preview: 'Estudos', prompt: 'Forneça 5 argumentos a favor e 5 argumentos contra o tema [TEMA]. Seja imparcial e profundo.' },
@@ -138,7 +137,7 @@ export const TEMPLATES: Template[] = [
   { id: 'i20', title: 'Post-Apocalyptic City', type: 'image', preview: 'Arquitetura', prompt: 'Abandoned city overgrown with plants, ruins, post-apocalyptic atmosphere, cinematic lighting, The Last of Us style.' },
   { id: 'i21', title: 'Food Editorial Photo', type: 'image', preview: 'Produto', prompt: 'Platter of [FOOD], moody lighting, top down view, rustic table, food magazine aesthetic, professional.' },
   { id: 'i22', title: 'Mythical Creature Design', type: 'image', preview: 'Arte', prompt: 'Full body design of a hybrid [ANIMAL A] and [ANIMAL B], ornate details, magical aura, white background.' },
-  { id: 'i23', title: 'Cyberpunk Vehicle', type: 'image', prompt: 'Produto', preview: 'Futuristic flying motorcycle, chrome finish, glowing engines, cyberpunk city background, speed lines.' },
+  { id: 'i23', title: 'Cyberpunk Vehicle', type: 'image', preview: 'Produto', prompt: 'Futuristic flying motorcycle, chrome finish, glowing engines, cyberpunk city background, speed lines.' },
   { id: 'i24', title: 'Glitch Art Portrait', type: 'image', preview: 'Pessoa', prompt: 'Surreal portrait with digital glitch effects, neon colors, VHS aesthetic, experimental photography.' },
   { id: 'i25', title: 'Minimalist Nature Wall', type: 'image', preview: 'Paisagem', prompt: 'Abstract minimalist landscape, mountain silhouettes, sun, earth tones, flat design style.' },
 ];
