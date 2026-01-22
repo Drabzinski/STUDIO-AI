@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sun, Moon, Sparkles, Image as ImageIcon, MessageSquare, 
   ArrowLeft, Copy, RotateCcw, Check, Menu, X, Info, Search,
-  Zap, Compass, Target, Layers, Eye, Repeat, Trophy, Shield
+  Zap, Compass, Target, Layers, Eye, Repeat, Trophy, Shield,
+  Play, Loader2
 } from 'lucide-react';
+import { GoogleGenAI } from "@google/genai";
 import { AppView, AIModel, PromptState, Template, Example } from './types';
 import { AI_OPTIONS, TEXT_CATEGORIES, IMAGE_TYPES, COURSE_MODULES, TEMPLATES, EXAMPLES } from './constants';
 
@@ -18,6 +20,11 @@ const App: React.FC = () => {
   const [promptState, setPromptState] = useState<PromptState | null>(null);
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // AI Execution States
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     document.documentElement.className = theme;
@@ -34,6 +41,8 @@ const App: React.FC = () => {
 
   const handleStartFlow = (type: 'text' | 'image') => {
     setPromptState({ type, selectedAI: 'ChatGPT', category: '', details: {}, generatedPrompt: '' });
+    setAiResponse(null);
+    setAiImageUrl(null);
     setView('ai-select');
     setIsMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -46,6 +55,41 @@ const App: React.FC = () => {
       setView(promptState.type === 'text' ? 'text-module' : 'image-module');
     }
     window.scrollTo({ top: 0 });
+  };
+
+  const executeWithGemini = async () => {
+    if (!promptState?.generatedPrompt) return;
+    setIsAiLoading(true);
+    setAiResponse(null);
+    setAiImageUrl(null);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      
+      if (promptState.type === 'text') {
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: promptState.generatedPrompt,
+        });
+        setAiResponse(response.text || "Sem resposta da IA.");
+      } else {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: { parts: [{ text: promptState.generatedPrompt }] },
+        });
+        
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            setAiImageUrl(`data:image/png;base64,${part.inlineData.data}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erro na IA:", error);
+      setAiResponse("Erro ao conectar com a IA. Verifique sua conexão ou chave de API.");
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -126,7 +170,20 @@ const App: React.FC = () => {
           {view === 'ai-select' && <AISelectView key="ai" onSelect={handleSelectAI} onBack={() => setView('hero')} theme={theme} />}
           {view === 'text-module' && <TextModuleView key="text" selectedAI={selectedAI!} onComplete={(p) => { setPromptState({...promptState!, generatedPrompt: p}); setView('result'); }} onBack={() => setView('ai-select')} theme={theme} />}
           {view === 'image-module' && <ImageModuleView key="image" selectedAI={selectedAI!} onComplete={(p) => { setPromptState({...promptState!, generatedPrompt: p}); setView('result'); }} onBack={() => setView('ai-select')} theme={theme} />}
-          {view === 'result' && <ResultView key="res" promptState={promptState!} onCopy={copyToClipboard} copied={copied} onRestart={() => setView('hero')} theme={theme} />}
+          {view === 'result' && (
+            <ResultView 
+              key="res" 
+              promptState={promptState!} 
+              onCopy={copyToClipboard} 
+              copied={copied} 
+              onRestart={() => setView('hero')} 
+              theme={theme}
+              onExecute={executeWithGemini}
+              isLoading={isAiLoading}
+              response={aiResponse}
+              imageUrl={aiImageUrl}
+            />
+          )}
           {view === 'course' && <CourseView key="cour" onBack={() => setView('hero')} theme={theme} />}
           {view === 'templates' && <TemplatesView key="temp" onCopy={copyToClipboard} copied={copied} onBack={() => setView('hero')} theme={theme} />}
           {view === 'examples' && <ExamplesView key="ex" onBack={() => setView('hero')} theme={theme} />}
@@ -136,7 +193,7 @@ const App: React.FC = () => {
   );
 };
 
-// --- Subcomponents Otimizados ---
+// --- Subcomponents ---
 
 const HeroView: React.FC<{ onStart: (t: 'text' | 'image') => void }> = ({ onStart }) => (
   <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={mobileTransition} className="max-w-6xl w-full px-6 text-center py-8">
@@ -147,7 +204,7 @@ const HeroView: React.FC<{ onStart: (t: 'text' | 'image') => void }> = ({ onStar
       Ideias em <br /><span className="text-gradient">Prompts Reais</span>
     </h1>
     <p className="text-sm md:text-xl mb-12 max-w-xl mx-auto opacity-60 leading-relaxed font-medium">
-      Engenharia de prompts de alto nível para 2026.
+      Engenharia de prompts de alto nível para 2026. Gere, copie e teste seus prompts instantaneamente.
     </p>
     <div className="flex flex-col md:flex-row gap-4 justify-center px-4">
       <button onClick={() => onStart('text')} className="w-full md:w-auto px-10 py-5 rounded-2xl bg-gradient-premium text-white font-black text-lg active:scale-95 transition-transform shadow-xl">Criar Texto</button>
@@ -268,25 +325,81 @@ const ImageModuleView: React.FC<{ selectedAI: AIModel, onComplete: (p: string) =
   );
 };
 
-const ResultView: React.FC<{ promptState: PromptState, onCopy: (p: string) => void, copied: boolean, onRestart: () => void, theme: string }> = ({ promptState, onCopy, copied, onRestart, theme }) => (
+const ResultView: React.FC<{ 
+  promptState: PromptState, 
+  onCopy: (p: string) => void, 
+  copied: boolean, 
+  onRestart: () => void, 
+  theme: string,
+  onExecute: () => void,
+  isLoading: boolean,
+  response: string | null,
+  imageUrl: string | null
+}> = ({ promptState, onCopy, copied, onRestart, theme, onExecute, isLoading, response, imageUrl }) => (
   <motion.section initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-3xl px-6">
     <div className="text-center mb-8">
       <h2 className="text-3xl font-black">Prompt Master ✨</h2>
     </div>
-    <div className={`p-8 rounded-[2.5rem] border shadow-2xl ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-black/5'}`}>
+    
+    <div className={`p-8 rounded-[2.5rem] border shadow-2xl mb-8 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-black/5'}`}>
       <div className={`p-6 rounded-2xl border-2 font-medium text-lg italic mb-10 ${theme === 'dark' ? 'bg-black/30 border-white/5 text-zinc-300' : 'bg-zinc-50 border-black/5'}`}>
         "{promptState.generatedPrompt}"
       </div>
-      <div className="flex flex-col gap-4">
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button onClick={() => onCopy(promptState.generatedPrompt)} className={`py-5 rounded-2xl font-black text-lg shadow-xl flex items-center justify-center gap-3 transition-colors ${copied ? 'bg-emerald-500' : 'bg-gradient-premium'}`}>
           {copied ? <Check size={24} /> : <Copy size={24} />}
-          {copied ? 'Copiado!' : 'Copiar Prompt Master'}
+          {copied ? 'Copiado!' : 'Copiar Prompt'}
         </button>
-        <button onClick={onRestart} className="py-5 rounded-2xl border-2 border-white/10 font-black text-lg flex items-center justify-center gap-2">
-          <RotateCcw size={20} /> Recomeçar
+        
+        <button 
+          onClick={onExecute} 
+          disabled={isLoading}
+          className="py-5 rounded-2xl border-2 border-cyan-500 bg-cyan-500/10 font-black text-lg flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 transition-all"
+        >
+          {isLoading ? <Loader2 size={24} className="animate-spin" /> : <Play size={24} />}
+          {isLoading ? 'IA Processando...' : 'Testar com IA'}
         </button>
       </div>
+
+      <button onClick={onRestart} className="w-full mt-4 py-4 rounded-xl border-2 border-white/5 opacity-40 font-black text-sm flex items-center justify-center gap-2">
+        <RotateCcw size={16} /> Criar outro
+      </button>
     </div>
+
+    {/* AI OUTPUT AREA */}
+    <AnimatePresence>
+      {(response || imageUrl || isLoading) && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          className={`p-8 rounded-[2.5rem] border ${theme === 'dark' ? 'bg-white/5 border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.1)]' : 'bg-white border-black/5 shadow-xl'}`}
+        >
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Resposta da IA</span>
+          </div>
+
+          {isLoading ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-4 opacity-40">
+              <Loader2 className="animate-spin" size={40} />
+              <p className="font-bold italic">O Gemini está gerando sua resposta...</p>
+            </div>
+          ) : (
+            <div className="prose prose-invert max-w-none">
+              {imageUrl ? (
+                <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white/5">
+                  <img src={imageUrl} alt="Resultado da IA" className="w-full h-auto" />
+                </div>
+              ) : (
+                <p className={`text-lg leading-relaxed font-medium ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+                  {response}
+                </p>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
   </motion.section>
 );
 
@@ -349,7 +462,6 @@ const TemplatesView: React.FC<{ onCopy: (p: string) => void, copied: boolean, on
   );
 };
 
-// Re-using simplified Course and Examples views from previous optimized version
 const CourseView: React.FC<{ onBack: () => void, theme: string }> = ({ onBack, theme }) => {
   const [active, setActive] = useState(1);
   return (
