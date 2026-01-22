@@ -9,7 +9,7 @@ import {
 import { AppView, AIModel, PromptState, Template, Example } from './types';
 import { AI_OPTIONS, TEXT_CATEGORIES, IMAGE_TYPES, COURSE_MODULES, TEMPLATES, EXAMPLES } from './constants';
 
-const mobileTransition = { type: "spring", damping: 30, stiffness: 250 };
+const mobileTransition = { type: "spring" as const, damping: 30, stiffness: 250 };
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
