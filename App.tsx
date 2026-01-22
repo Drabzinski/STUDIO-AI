@@ -5,9 +5,8 @@ import {
   Sun, Moon, Sparkles, Image as ImageIcon, MessageSquare, 
   ArrowLeft, Copy, RotateCcw, Check, Menu, X, Search,
   Zap, Compass, Target, Layers, Eye, Repeat, Trophy, Shield,
-  Play, Loader2, Cpu
+  Cpu
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import { AppView, AIModel, PromptState } from './types';
 import { AI_OPTIONS, TEXT_CATEGORIES, COURSE_MODULES, TEMPLATES, EXAMPLES } from './constants';
 
@@ -20,10 +19,6 @@ const App: React.FC = () => {
   const [promptState, setPromptState] = useState<PromptState | null>(null);
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
-  const [aiResponse, setAiResponse] = useState<string | null>(null);
-  const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     document.documentElement.className = theme;
@@ -33,8 +28,6 @@ const App: React.FC = () => {
 
   const handleStartFlow = (type: 'text' | 'image') => {
     setPromptState({ type, selectedAI: 'ChatGPT', category: '', details: {}, generatedPrompt: '' });
-    setAiResponse(null);
-    setAiImageUrl(null);
     setView('ai-select');
     setIsMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -49,62 +42,22 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0 });
   };
 
-  const executeWithGemini = async () => {
-    if (!promptState?.generatedPrompt) return;
-    setIsAiLoading(true);
-    setAiResponse(null);
-    setAiImageUrl(null);
-
-    try {
-      const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-      
-      if (promptState.type === 'text') {
-        const response = await genAI.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: promptState.generatedPrompt,
-        });
-        setAiResponse(response.text || "Sem resposta da IA.");
-      } else {
-        const response = await genAI.models.generateContent({
-          model: 'gemini-2.5-flash-image',
-          contents: { parts: [{ text: promptState.generatedPrompt }] },
-        });
-        
-        // Verificação ultra-segura para satisfazer o TypeScript
-        const candidates = response.candidates;
-        if (candidates && candidates.length > 0) {
-          const firstCandidate = candidates[0];
-          if (firstCandidate.content && firstCandidate.content.parts) {
-            const parts = firstCandidate.content.parts;
-            for (const part of parts) {
-              if (part.inlineData) {
-                setAiImageUrl(`data:image/png;base64,${part.inlineData.data}`);
-              } else if (part.text) {
-                setAiResponse(part.text);
-              }
-            }
-          }
-        } else {
-          setAiResponse("Nenhuma imagem gerada.");
-        }
-      }
-    } catch (error: any) {
-      console.error("Erro na IA:", error);
-      setAiResponse(`Erro: ${error.message || "Falha na conexão"}. Verifique sua chave API.`);
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const navigateTo = (newView: AppView) => {
+    setView(newView);
+    setIsMenuOpen(false);
+    window.scrollTo({ top: 0 });
+  };
+
   return (
     <div className={`min-h-screen flex flex-col transition-all duration-700 ${theme === 'dark' ? 'bg-[#000] text-white' : 'bg-[#f8faff] text-zinc-900'}`}>
       
+      {/* Background Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full blur-[120px] opacity-[0.15] bg-cyan-500 animate-pulse"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full blur-[120px] opacity-[0.15] bg-purple-600 animate-pulse" style={{ animationDelay: '2s' }}></div>
@@ -112,27 +65,51 @@ const App: React.FC = () => {
 
       <header className={`fixed top-0 left-0 right-0 z-[100] border-b backdrop-blur-xl transition-colors duration-500 ${theme === 'dark' ? 'bg-black/60 border-white/5' : 'bg-white/70 border-black/5'}`}>
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setView('hero'); setIsMenuOpen(false); }}>
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo('hero')}>
             <div className="w-10 h-10 bg-gradient-premium rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(0,242,255,0.3)] group-hover:scale-110 transition-transform">
               <Sparkles className="text-white" size={20} />
             </div>
             <span className="text-xl font-black tracking-tight">STUDIO <span className="text-gradient">AI</span></span>
           </div>
 
+          {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-8">
-            <button onClick={() => setView('templates')} className="text-xs font-black uppercase tracking-widest opacity-40 hover:opacity-100 hover:text-cyan-400 transition-all">Templates</button>
-            <button onClick={() => setView('examples')} className="text-xs font-black uppercase tracking-widest opacity-40 hover:opacity-100 hover:text-cyan-400 transition-all">Exemplos</button>
-            <button onClick={() => setView('course')} className="text-xs font-black uppercase tracking-widest opacity-40 hover:opacity-100 hover:text-cyan-400 transition-all">Curso</button>
+            <button onClick={() => navigateTo('templates')} className="text-xs font-black uppercase tracking-widest opacity-40 hover:opacity-100 hover:text-cyan-400 transition-all">Templates</button>
+            <button onClick={() => navigateTo('examples')} className="text-xs font-black uppercase tracking-widest opacity-40 hover:opacity-100 hover:text-cyan-400 transition-all">Exemplos</button>
+            <button onClick={() => navigateTo('course')} className="text-xs font-black uppercase tracking-widest opacity-40 hover:opacity-100 hover:text-cyan-400 transition-all">Curso</button>
             <div className="h-6 w-px bg-white/10 mx-2" />
             <button onClick={toggleTheme} className="p-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all">
               {theme === 'dark' ? <Sun size={18} className="text-cyan-400" /> : <Moon size={18} />}
             </button>
           </nav>
 
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-white">
+          {/* Hamburger Toggle */}
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 relative z-[110]">
             {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
+
+        {/* Mobile Menu Overlay */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+              className={`fixed inset-0 z-[105] lg:hidden flex flex-col p-10 pt-32 gap-6 ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}
+            >
+              <button onClick={() => navigateTo('templates')} className="text-2xl font-black text-left uppercase tracking-tighter">Templates</button>
+              <button onClick={() => navigateTo('examples')} className="text-2xl font-black text-left uppercase tracking-tighter">Exemplos</button>
+              <button onClick={() => navigateTo('course')} className="text-2xl font-black text-left uppercase tracking-tighter">Curso</button>
+              <div className="h-px bg-white/10 my-4" />
+              <button onClick={toggleTheme} className="flex items-center gap-4 text-xl font-bold">
+                {theme === 'dark' ? <Sun className="text-cyan-400" /> : <Moon />}
+                {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       <main className="flex-grow pt-32 pb-20 relative z-10 w-full flex flex-col items-center px-6">
@@ -149,10 +126,6 @@ const App: React.FC = () => {
               copied={copied} 
               onRestart={() => setView('hero')} 
               theme={theme}
-              onExecute={executeWithGemini}
-              isLoading={isAiLoading}
-              response={aiResponse}
-              imageUrl={aiImageUrl}
             />
           )}
           {view === 'course' && <CourseView key="cour" onBack={() => setView('hero')} theme={theme} />}
@@ -310,12 +283,8 @@ const ResultView: React.FC<{
   onCopy: (p: string) => void, 
   copied: boolean, 
   onRestart: () => void, 
-  theme: string,
-  onExecute: () => void,
-  isLoading: boolean,
-  response: string | null,
-  imageUrl: string | null
-}> = ({ promptState, onCopy, copied, onRestart, theme, onExecute, isLoading, response, imageUrl }) => (
+  theme: string
+}> = ({ promptState, onCopy, copied, onRestart }) => (
   <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-4xl">
     <div className="glass p-12 rounded-[3.5rem] mb-10 shadow-[0_50px_100px_rgba(0,0,0,0.5)] border-white/10 relative overflow-hidden">
       <div className="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none">
@@ -330,48 +299,21 @@ const ResultView: React.FC<{
           {copied ? <Check className="text-green-400" /> : <Copy size={20} />}
         </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <button onClick={() => onCopy(promptState.generatedPrompt)} className="py-6 rounded-[1.5rem] bg-white text-black font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all">
-          {copied ? <Check size={24} /> : <Copy size={24} />}
-          {copied ? 'Copiado!' : 'Copiar Prompt'}
+      
+      <div className="flex flex-col gap-4">
+        <button 
+          onClick={() => onCopy(promptState.generatedPrompt)} 
+          className="w-full py-8 rounded-[2rem] bg-gradient-premium text-white font-black text-2xl flex items-center justify-center gap-4 hover:shadow-[0_0_50px_rgba(0,242,255,0.4)] hover:scale-[1.02] active:scale-95 transition-all"
+        >
+          {copied ? <Check size={32} /> : <Copy size={32} />}
+          {copied ? 'Copiado com Sucesso!' : 'Copiar para usar na IA'}
         </button>
-        <button onClick={onExecute} disabled={isLoading} className="py-6 rounded-[1.5rem] bg-gradient-premium text-white font-black text-lg flex items-center justify-center gap-3 hover:shadow-[0_0_40px_rgba(0,242,255,0.4)] disabled:opacity-50 transition-all group">
-          {isLoading ? <Loader2 className="animate-spin" size={24} /> : <Play className="group-hover:translate-x-1 transition-transform" size={24} />}
-          {isLoading ? 'IA Processando...' : 'Executar no Gemini'}
+        
+        <button onClick={onRestart} className="mt-8 w-full py-4 opacity-30 hover:opacity-100 transition-opacity font-bold uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
+          <RotateCcw size={14} /> Criar um Novo Prompt
         </button>
       </div>
-      <button onClick={onRestart} className="mt-8 w-full py-4 opacity-30 hover:opacity-100 transition-opacity font-bold uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
-        <RotateCcw size={14} /> Começar do Zero
-      </button>
     </div>
-    <AnimatePresence>
-      {(response || imageUrl || isLoading) && (
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="glass p-12 rounded-[3.5rem] border-cyan-500/20 shadow-[0_0_100px_rgba(0,242,255,0.05)]">
-          <div className="flex items-center gap-4 mb-10">
-            <div className={`w-3 h-3 rounded-full ${isLoading ? 'bg-cyan-400 animate-ping' : 'bg-green-400'}`} />
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400">Motor de Resposta Gemini</span>
-          </div>
-          {isLoading ? (
-            <div className="py-20 flex flex-col items-center gap-8 opacity-40">
-              <Loader2 className="animate-spin text-cyan-400" size={64} />
-              <p className="text-xl font-black italic animate-pulse">Engenhando sua resposta...</p>
-            </div>
-          ) : (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
-              {imageUrl ? (
-                <div className="rounded-[2.5rem] overflow-hidden border-8 border-white/5 shadow-2xl group cursor-zoom-in">
-                  <img src={imageUrl} alt="IA Result" className="w-full h-auto group-hover:scale-105 transition-transform duration-700" />
-                </div>
-              ) : (
-                <div className="bg-white/5 p-10 rounded-[2.5rem] border border-white/5">
-                  <p className="text-xl leading-relaxed font-medium whitespace-pre-wrap text-zinc-300">{response}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </motion.div>
-      )}
-    </AnimatePresence>
   </motion.section>
 );
 
